@@ -1,7 +1,7 @@
 version: "3"
 services:
   setup:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
+    image: docker.arvancloud.ir/elasticsearch:8.12.1
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - KIBANA_PASSWORD=${KIBANA_PASSWORD}
@@ -17,7 +17,7 @@ services:
         echo "All done!";
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
+    image: docker.arvancloud.ir/elasticsearch:8.12.1
     # give the container a name
     # this will also set the container's hostname as elasticsearch
     container_name: elasticsearch
@@ -32,7 +32,7 @@ services:
       - xpack.security.http.ssl.enabled=false
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.12.1
+    image: docker.arvancloud.ir/kibana/kibana:8.12.1
     container_name: kibana
     ports:
       - 5601:5601
@@ -46,7 +46,7 @@ services:
       # telemetry data to kibana developers
       - TELEMETRY_ENABLED=false
   logstash:
-    image: docker.elastic.co/logstash/logstash:8.12.1
+    image: docker.arvancloud.ir/logstash:8.12.1
     container_name: logstash
     command:
       - /bin/bash
