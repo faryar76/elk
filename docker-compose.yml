@@ -1,7 +1,7 @@
 version: '3'
 services:
   elasticsearch:
-    image: elasticsearch:7.9.1
+    image: docker.arvancloud.ir/elasticsearch:7.9.1
     container_name: elasticsearch
     ports:
       - "9200:9200"
@@ -21,7 +21,7 @@ services:
       - elk
 
   logstash:
-    image: logstash:7.9.1
+    image: docker.arvancloud.ir/logstash:7.9.1
     container_name: logstash
     ports:
       - "5044:5044"
@@ -37,7 +37,7 @@ services:
       - elasticsearch
 
   kibana:
-    image: kibana:7.9.1
+    image: docker.arvancloud.ir/kibana:7.9.1
     container_name: kibana
     ports:
       - "5601:5601"
@@ -56,4 +56,4 @@ networks:
 volumes:
   test_data:
   ls_data:
-  kb_data
+  kb_data:
