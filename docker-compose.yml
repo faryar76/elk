@@ -1,59 +1,66 @@
 version: "3"
 services:
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+    container_name: setup
+    command:
+      - bash
+      - -c
+      - |
+        echo "Waiting for Elasticsearch availability";
+        until curl -s http://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+        echo "Setting kibana_system password";
+        until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "All done!";
+
   elasticsearch:
-    image: docker.arvancloud.ir/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
+    # give the container a name
+    # this will also set the container's hostname as elasticsearch
     container_name: elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    volumes:
-      - test_data:/usr/share/elasticsearch/data/
-      - ./elk-config/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     environment:
       - discovery.type=single-node
-      - http.host=0.0.0.0
-      - transport.host=0.0.0.0
-      - xpack.security.enabled=false
-      - xpack.monitoring.enabled=false
       - cluster.name=elasticsearch
       - bootstrap.memory_lock=true
-    networks:
-      - elk
-
-  logstash:
-    image: docker.arvancloud.ir/logstash:8.15.0
-    container_name: logstash
-    ports:
-      - "5044:5044"
-      - "9600:9600"
-    volumes:
-      - ./elk-config/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-      - ./elk-config/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
-      - ls_data:/usr/share/logstash/data
-
-    networks:
-      - elk
-    depends_on:
-      - elasticsearch
+      # limits elasticsearch to 1 GB of RAM
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      # The password for the 'elastic' user
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.http.ssl.enabled=false
 
   kibana:
-    image: docker.arvancloud.ir/kibana:8.15.0
+    image: docker.elastic.co/kibana/kibana:8.12.1
     container_name: kibana
     ports:
-      - "5601:5601"
+      - 5601:5601
+    environment:
+      # remember the container_name for elasticsearch?
+      # we use it here to access that container
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      # Change this to true if you want to sent
+      # telemetry data to kibana developers
+      - TELEMETRY_ENABLED=false
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.1
+    container_name: logstash
+    command:
+      - /bin/bash
+      - -c
+      - |
+        cp /usr/share/logstash/pipeline/logstash.yml /usr/share/logstash/config/logstash.yml
+        echo "Waiting for Elasticsearch availability";
+        until curl -s http://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 1; done;
+        echo "Starting logstash";
+        /usr/share/logstash/bin/logstash -f /usr/share/logstash/pipeline/logstash.conf
+    environment:
+      - xpack.monitoring.enabled=false
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_HOSTS=http://elasticsearch:9200
     volumes:
-      - ./elk-config/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
-      - kb_data:/usr/share/kibana/data
-    networks:
-      - elk
-    depends_on:
-      - elasticsearch
-
-networks:
-  elk:
-    driver: bridge
-
-volumes:
-  test_data:
-  ls_data:
-  kb_data:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
