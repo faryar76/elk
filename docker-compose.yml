@@ -32,7 +32,7 @@ services:
       - xpack.security.http.ssl.enabled=false
 
   kibana:
-    image: docker.arvancloud.ir/kibana/kibana:8.12.1
+    image: docker.arvancloud.ir/kibana:8.12.1
     container_name: kibana
     ports:
       - 5601:5601
